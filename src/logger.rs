@@ -21,22 +21,6 @@
 //! The log messages are filtered by configuring the log level to exclude
 //! message with lower priority.
 //!
-//! # Example
-//!
-//! ```
-//! [macro_use]
-//! extern crate logu;
-//!
-//! use std::io;
-//!
-//! pub fn foo() {
-//!     let mut stdout = io::stdout();
-//!     let mut logger = log::Logger::new(log::Level::Info, &mut stdout);
-//!
-//!     info!(logger, "foo");
-//! }
-//! ```
-//!
 //! # Log format
 //!
 //! Every log message obeys the following fixed and easily-parsable format:
@@ -70,23 +54,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// The standard logging macro.
 ///
 /// This macro will generically log with the specified `Level` and arguments list.
-///
-/// # Example
-///
-/// ```
-/// #[macro_use]
-/// extern crate logu;
-///
-/// use logu::log;
-/// use std::io;
-///
-/// # fn main() {
-/// let mut stderr = io::stderr();
-/// let mut logger = log::Logger::new(log::Level::Debug, &mut strerr);
-///
-/// log!(logger, log::Level::Error, "{}", 123);
-/// # }
-/// ```
 #[macro_export]
 macro_rules! log {
     ($logger:expr, $lvl:expr, $($arg:tt)+) => {
@@ -98,7 +65,7 @@ macro_rules! log {
 #[macro_export]
 macro_rules! emerge {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Emerge, $($arg)+);
+        log!($logger, $crate::logger::Level::Emerge, $($arg)+);
     };
 }
 
@@ -106,7 +73,7 @@ macro_rules! emerge {
 #[macro_export]
 macro_rules! alert {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Alert, $($arg)+);
+        log!($logger, $crate::logger::Level::Alert, $($arg)+);
     };
 }
 
@@ -114,7 +81,7 @@ macro_rules! alert {
 #[macro_export]
 macro_rules! crit {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Critical, $($arg)+);
+        log!($logger, $crate::logger::Level::Critical, $($arg)+);
     };
 }
 
@@ -122,7 +89,7 @@ macro_rules! crit {
 #[macro_export]
 macro_rules! error {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Error, $($arg)+);
+        log!($logger, $crate::logger::Level::Error, $($arg)+);
     };
 }
 
@@ -130,7 +97,7 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Warning, $($arg)+);
+        log!($logger, $crate::logger::Level::Warning, $($arg)+);
     };
 }
 
@@ -138,7 +105,7 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! notice {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Notice, $($arg)+);
+        log!($logger, $crate::logger::Level::Notice, $($arg)+);
     };
 }
 
@@ -146,7 +113,7 @@ macro_rules! notice {
 #[macro_export]
 macro_rules! info {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Info, $($arg)+);
+        log!($logger, $crate::logger::Level::Info, $($arg)+);
     };
 }
 
@@ -154,23 +121,23 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     ($logger:expr, $($arg:tt)+) => {
-        log!($logger, $crate::log::Level::Debug, $($arg)+);
+        log!($logger, $crate::logger::Level::Debug, $($arg)+);
     };
 }
 
 /// A format optimized Logger
-pub struct Logger<'a> {
+pub struct Logger {
     filter: Level,
-    writer: &'a mut dyn io::Write,
+    writer: Box<dyn io::Write>,
     last_ts: u64,
     buffer: [u8; 4096],
 }
 
-impl<'a> Logger<'a> {
+impl Logger {
     /// Constructs a `Logger` instance with specified `Level` and io backed
     /// writer.
     #[inline]
-    pub fn new(filter: Level, writer: &'a mut dyn io::Write) -> Logger {
+    pub fn new(filter: Level, writer: Box<dyn io::Write>) -> Logger {
         Logger {
             filter,
             writer,
@@ -399,7 +366,7 @@ impl FromStr for Level {
                     .all(|(a, b)| (a | 0x20) == (b | 0x20))
             })
             .into_iter()
-            .map(|idx| Level::from(idx))
+            .map(Level::from)
             .next();
 
         match opt {
